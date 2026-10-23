@@ -5,10 +5,10 @@
 
 #define NB_LIGNES 10
 #define NB_COLONNES 10
-#define INFINI 100000          // valeur d'une victoire (+ profondeur restante) 
-#define BORNE 1000000          // strictement > INFINI + profondeur : sentinelle alpha/beta
-#define PROFONDEUR_IA 3        // fixee a 3 pour le tournoi
-#define MAX_TOURS 400          // pour IA vs IA (partie nulle)
+#define INFINI 100000          /* valeur d'une victoire (+ profondeur restante) */
+#define BORNE 1000000          /* strictement > INFINI + profondeur : sentinelle alpha/beta */
+#define PROFONDEUR_IA 3        /* fixee a 3 pour le tournoi */
+#define MAX_TOURS 400          /* garde-fou IA vs IA (partie nulle) */
 #define AFFICHE_STATS 1
 
 /* Compiler avec -DMINIMAX_PUR pour desactiver les coupures (mesures du rapport) */
@@ -62,7 +62,8 @@ char f_convert_int2char(int i)
 
 Pion *f_init_plateau()
 {
-    // Initialisation du plateau de jeu : 1 = joueur x, -1 = joueur o, 0 = case vide
+    /* Plateau initial du sujet : {ligne, colonne, couleur, valeur}
+       couleur : 1 = joueur x, -1 = joueur o ; 0 = case vide */
     static const int init[][4] = {
         {9,5, 1,1},{9,6, 1,2},{9,7, 1,3},{9,8, 1,2},{9,9, 1,1},
         {8,0, 1,1},{8,1, 1,3},{8,2, 1,3},{8,3, 1,1},{8,6, 1,1},{8,7, 1,1},{8,8, 1,1},
@@ -123,7 +124,7 @@ void f_affiche_plateau(Pion *plateau)
     printf("    ");
 }
 
-// Gagnant d'un plateau quelconque : 1, -1 ou 0 
+/* Gagnant d'un plateau quelconque : 1, -1 ou 0 */
 static int f_gagnant_plateau(Pion *jeu)
 {
     int i, j;
@@ -153,13 +154,13 @@ static int f_gagnant_plateau(Pion *jeu)
     return 0;
 }
 
-// Gagnant d'un plateau quelconque : 1, -1 ou 0
+/* Gagnant du plateau de jeu courant : 1, -1 ou 0 */
 int f_gagnant()
 {
     return f_gagnant_plateau(plateauDeJeu);
 }
 
-// Bataille sur la case (l,c) du plateau global plateauDeJeu
+/* Bataille sur la case (l,c) du plateau global plateauDeJeu */
 int f_bataille(int l, int c)
 {
     int i, j, mini, maxi, minj, maxj;
@@ -182,7 +183,7 @@ int f_bataille(int l, int c)
     return plateauDeJeu[l * NB_COLONNES + c].couleur;
 }
 
-// Renvoie 1 si le mouvement est invalide, 0 sinon
+/* Renvoie 1 si le mouvement est invalide, 0 sinon */
 int f_test_mouvement(Pion *plateau, int l1, int c1, int l2, int c2, int couleur)
 {
     if(l1 < 0 || l1 >= NB_LIGNES || l2 < 0 || l2 >= NB_LIGNES ||
@@ -197,9 +198,9 @@ int f_test_mouvement(Pion *plateau, int l1, int c1, int l2, int c2, int couleur)
     return 0;
 }
 
-// Renvoie 1 en cas d'erreur, 0 sinon.
-// ATTENTION : f_bataille lit le plateau global ; plateau doit etre plateauDeJeu
-// (f_joue_coup se charge de le rediriger pour la recherche).
+/* Renvoie 1 en cas d'erreur, 0 sinon.
+ * ATTENTION : f_bataille lit le plateau global ; plateau doit etre plateauDeJeu
+ * (f_joue_coup se charge de le rediriger pour la recherche). */
 int f_bouge_piece(Pion *plateau, int l1, int c1, int l2, int c2, int couleur)
 {
     int gagnant = 0;
@@ -234,6 +235,40 @@ int f_bouge_piece(Pion *plateau, int l1, int c1, int l2, int c2, int couleur)
 void f_copie_plateau(Pion *source, Pion *destination)
 {
     memcpy(destination, source, NB_LIGNES * NB_COLONNES * sizeof(Pion));
+}
+
+/* Nombre de pions d'un joueur */
+int f_nbPions(Pion *jeu, int joueur)
+{
+    int i, j, nb = 0;
+    for(i = 0; i < NB_LIGNES; i++)
+        for(j = 0; j < NB_COLONNES; j++)
+            if(jeu[i * NB_COLONNES + j].couleur == joueur)
+                nb++;
+    return nb;
+}
+
+/* Somme des valeurs des pions d'un joueur */
+int f_valeur(Pion *jeu, int joueur)
+{
+    int i, j, valeur = 0;
+    for(i = 0; i < NB_LIGNES; i++)
+        for(j = 0; j < NB_COLONNES; j++)
+            if(jeu[i * NB_COLONNES + j].couleur == joueur)
+                valeur += jeu[i * NB_COLONNES + j].valeur;
+    return valeur;
+}
+
+/* Plateau vide (a liberer avec free) */
+Pion *f_raz_plateau()
+{
+    Pion *jeu = (Pion *)calloc(NB_LIGNES * NB_COLONNES, sizeof(Pion));
+    if(jeu == NULL)
+    {
+        fprintf(stderr, "error: unable to allocate memory\n");
+        exit(EXIT_FAILURE);
+    }
+    return jeu;
 }
 
 /* Copie source dans destination puis joue le coup sur destination.
@@ -304,7 +339,7 @@ int f_max(Pion *jeu, int joueur, int profondeur, int alpha, int beta)
 }
 
 /* Minimax avec coupures alpha-beta (variante fail-soft).
-  'joueur' = camp pour lequel l'IA calcule ; maximisant = 1 si c'est a lui de jouer. */
+ * 'joueur' = camp pour lequel l'IA calcule ; maximisant = 1 si c'est a lui de jouer. */
 static int f_minimax_alphabeta(Pion *jeu, int joueur, int profondeur, int alpha, int beta, int maximisant)
 {
     int l1, c1, l2, c2, valeur;
@@ -450,7 +485,7 @@ void f_humain(int joueur)
     char buffer[64];
     int l1, l2;
 
-    printf("joueur %s joue (ex: B8B7) : ", joueur == 1 ? "x" : "o");
+    printf("joueur %s joue (ex: F9E8) : ", joueur == 1 ? "x" : "o");
     while(1)
     {
         if(fgets(buffer, sizeof(buffer), stdin) == NULL)   /* EOF : on quitte, pas de boucle infinie */
